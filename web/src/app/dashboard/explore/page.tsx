@@ -50,7 +50,7 @@ export default function ExploreAI() {
       const searchLower = search.toLowerCase();
 
       const matchesSearch = search === "" || nameLower.includes(searchLower) || traitsLower.includes(searchLower);
-      const matchesGender = filters.gender === "all" || genderLower === filters.gender.toLowerCase() || traitsLower.includes(filters.gender);
+      const matchesGender = filters.gender === "all" || genderLower === filters.gender.toLowerCase() || new RegExp(`\\b${filters.gender.toLowerCase()}\\b`).test(traitsLower);
       const matchesAge = filters.age === "all" || traitsLower.includes(filters.age.replace("-", " "));
       const matchesCategory = filters.category === "all" || toneLower.includes(filters.category) || traitsLower.includes(filters.category);
 
