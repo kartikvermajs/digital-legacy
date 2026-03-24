@@ -2,6 +2,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -10,8 +11,13 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      // In a real app, URL config should come from Env
-      // const res = await axios.post('http://localhost:3001/api/auth/login', { email, password });
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+      const res = await axios.post(`${apiUrl}/api/auth/login`, { email, password });
+      
+      if (res.data?.token) {
+        await SecureStore.setItemAsync('token', res.data.token);
+      }
+      
       router.replace('/(main)');
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.error || 'Login failed');
