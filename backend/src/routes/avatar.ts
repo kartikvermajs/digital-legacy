@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import { v2 as cloudinary } from 'cloudinary'
 import Replicate from 'replicate'
 
@@ -7,10 +7,10 @@ export default async function avatarRoutes(fastify: FastifyInstance) {
     const data = await request.file()
     if (!data) return reply.status(400).send({ error: 'No file uploaded' })
 
-    cloudinary.config({ 
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-      api_key: process.env.CLOUDINARY_API_KEY, 
-      api_secret: process.env.CLOUDINARY_API_SECRET 
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+      api_key: process.env.CLOUDINARY_API_KEY!,
+      api_secret: process.env.CLOUDINARY_API_SECRET!
     })
 
     try {
@@ -36,8 +36,14 @@ export default async function avatarRoutes(fastify: FastifyInstance) {
     const { imageUrl } = request.body as any
     if (!imageUrl) return reply.status(400).send({ error: 'Image URL required' })
 
+    const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN
+
+    if (!REPLICATE_API_TOKEN) {
+      throw new Error('Missing REPLICATE_API_TOKEN')
+    }
+
     const replicate = new Replicate({
-      auth: process.env.REPLICATE_API_TOKEN,
+      auth: REPLICATE_API_TOKEN,
     })
 
     try {
@@ -54,7 +60,7 @@ export default async function avatarRoutes(fastify: FastifyInstance) {
 
       const generatedImageUrl = Array.isArray(output) ? output[0] : output
       const url = typeof generatedImageUrl === 'string' ? generatedImageUrl : (generatedImageUrl as any)?.url || String(generatedImageUrl)
-      
+
       await fastify.prisma.user.update({
         where: { id: request.user.id },
         data: { avatarUrl: url }

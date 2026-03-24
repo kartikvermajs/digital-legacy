@@ -1,0 +1,35 @@
+prisma.config.ts(11,3): error TS2375: Type '{ url: string | undefined; }' is not assignable to type '{ url?: string; shadowDatabaseUrl?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'url' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/plugins/prisma.ts(2,10): error TS2305: Module '"@prisma/client"' has no exported member 'PrismaClient'.
+src/routes/auth.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/avatar.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/avatar.ts(10,23): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(new_config?: boolean | ConfigOptions | undefined): ConfigOptions', gave the following error.
+    Argument of type '{ cloud_name: string | undefined; api_key: string | undefined; api_secret: string | undefined; }' is not assignable to parameter of type 'boolean | ConfigOptions | undefined'.
+      Type '{ cloud_name: string | undefined; api_key: string | undefined; api_secret: string | undefined; }' is not assignable to type 'ConfigOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property 'cloud_name' are incompatible.
+          Type 'string | undefined' is not assignable to type 'string'.
+            Type 'undefined' is not assignable to type 'string'.
+  Overload 2 of 3, '(key: keyof ConfigOptions, value?: undefined): any', gave the following error.
+    Argument of type '{ cloud_name: string | undefined; api_key: string | undefined; api_secret: string | undefined; }' is not assignable to parameter of type 'keyof ConfigOptions'.
+src/routes/avatar.ts(39,37): error TS2379: Argument of type '{ auth: string | undefined; }' is not assignable to parameter of type '{ auth?: string; userAgent?: string; baseUrl?: string; fetch?: (input: string | Request, init?: RequestInit | undefined) => Promise<Response>; fileEncodingStrategy?: FileEncodingStrategy; useFileOutput?: boolean; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'auth' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/routes/chat.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/chat.ts(3,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/promptBuilder.js'?
+src/routes/persona.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/tts.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/voice.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/websocket.ts(1,10): error TS1484: 'FastifyInstance' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/routes/websocket.ts(6,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean '../utils/promptBuilder.js'?
+src/routes/websocket.ts(13,16): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(33,24): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(40,45): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(75,28): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(78,24): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(104,28): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(108,24): error TS2339: Property 'socket' does not exist on type 'WebSocket'.
+src/routes/websocket.ts(113,24): error TS2339: Property 'socket' does not exist on type 'WebSocket'.

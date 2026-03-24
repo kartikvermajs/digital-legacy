@@ -1,16 +1,16 @@
-import { FastifyInstance } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import OpenAI from 'openai'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { buildSystemPrompt } from '../utils/promptBuilder'
+import { buildSystemPrompt } from '../utils/promptBuilder.js'
 
 export default async function websocketRoutes(fastify: FastifyInstance) {
   fastify.get('/conversation/:sessionId', { websocket: true }, (connection, req) => {
     const sessionId = (req.params as any).sessionId
     let audioBuffer = Buffer.alloc(0)
 
-    connection.socket.on('message', async (message: Buffer | string) => {
+    connection.on('message', async (message: Buffer | string) => {
       // If binary, append to audio buffer
       if (Buffer.isBuffer(message)) {
         audioBuffer = Buffer.concat([audioBuffer, message])
@@ -21,7 +21,7 @@ export default async function websocketRoutes(fastify: FastifyInstance) {
             // 1. STT (Whisper)
             const tempFilePath = path.join(os.tmpdir(), `audio-${Date.now()}.wav`)
             fs.writeFileSync(tempFilePath, audioBuffer)
-            
+
             const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
             const transcription = await openai.audio.transcriptions.create({
               file: fs.createReadStream(tempFilePath) as any,
@@ -30,14 +30,14 @@ export default async function websocketRoutes(fastify: FastifyInstance) {
             fs.unlinkSync(tempFilePath)
 
             const userText = transcription.text
-            connection.socket.send(JSON.stringify({ event: 'stt_result', text: userText }))
+            connection.send(JSON.stringify({ event: 'stt_result', text: userText }))
 
             // DB Fetch
             const session = await fastify.prisma.session.findUnique({
               where: { id: sessionId },
               include: { persona: true }
             })
-            if (!session) return connection.socket.send(JSON.stringify({ error: 'Session not found' }))
+            if (!session) return connection.send(JSON.stringify({ error: 'Session not found' }))
 
             await fastify.prisma.message.create({
               data: { sessionId, role: 'user', content: userText }
@@ -72,10 +72,10 @@ export default async function websocketRoutes(fastify: FastifyInstance) {
               const content = chunk.choices[0]?.delta?.content || ''
               if (content) {
                 fullResponse += content
-                connection.socket.send(JSON.stringify({ event: 'ai_text_chunk', text: content }))
+                connection.send(JSON.stringify({ event: 'ai_text_chunk', text: content }))
               }
             }
-            connection.socket.send(JSON.stringify({ event: 'ai_text_done', text: fullResponse }))
+            connection.send(JSON.stringify({ event: 'ai_text_done', text: fullResponse }))
 
             await fastify.prisma.message.create({
               data: { sessionId, role: 'ai', content: fullResponse }
@@ -101,16 +101,16 @@ export default async function websocketRoutes(fastify: FastifyInstance) {
               while (true) {
                 const { done, value } = await reader.read()
                 if (done) break
-                connection.socket.send(value) // binary stream back
+                connection.send(value) // binary stream back
               }
             }
-            
-            connection.socket.send(JSON.stringify({ event: 'tts_done' }))
+
+            connection.send(JSON.stringify({ event: 'tts_done' }))
             audioBuffer = Buffer.alloc(0) // reset for next turn
 
           } catch (err: any) {
             fastify.log.error(err)
-            connection.socket.send(JSON.stringify({ error: err.message }))
+            connection.send(JSON.stringify({ error: err.message }))
           }
         }
       }

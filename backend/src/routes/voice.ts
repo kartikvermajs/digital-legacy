@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import OpenAI from 'openai'
 import fs from 'fs'
 import path from 'path'

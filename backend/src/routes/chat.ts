@@ -1,6 +1,6 @@
-import { FastifyInstance } from 'fastify'
+import type { FastifyInstance } from 'fastify'
 import OpenAI from 'openai'
-import { buildSystemPrompt } from '../utils/promptBuilder'
+import { buildSystemPrompt } from '../utils/promptBuilder.js'
 
 export default async function chatRoutes(fastify: FastifyInstance) {
   fastify.post('/message', { preValidation: [fastify.authenticate] }, async (request, reply) => {
