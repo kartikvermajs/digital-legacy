@@ -39,7 +39,7 @@ export const api = {
     upload: (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      return fetchApi("/avatar", { method: "POST", body: formData });
+      return fetchApi("/avatar/upload", { method: "POST", body: formData });
     }
   }
 };

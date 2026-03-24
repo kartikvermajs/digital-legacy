@@ -46,6 +46,7 @@ export default function CreateAI() {
           name: formData.name,
           traits: traits,
           tone: formData.characterType,
+          gender: formData.gender,
         }),
       });
 

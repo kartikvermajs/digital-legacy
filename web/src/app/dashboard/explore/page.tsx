@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 interface Persona {
   id: string;
@@ -10,12 +11,29 @@ interface Persona {
   avatarUrl: string | null;
   traits: string;
   tone: string;
+  gender: string | null;
 }
 
 export default function ExploreAI() {
   const router = useRouter();
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: fetchPersonas = [], isLoading: loading } = useQuery({
+    queryKey: ['personas'],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        throw new Error("No token");
+      }
+      const res = await fetch("/api/personas", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Failed to fetch personas");
+      return res.json() as Promise<Persona[]>;
+    }
+  });
+
+  const personas = fetchPersonas || [];
+
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
     gender: "all",
@@ -23,36 +41,18 @@ export default function ExploreAI() {
     category: "all",
   });
 
-  useEffect(() => {
-    const fetchPersonas = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return router.push("/login");
-
-        const res = await fetch("/api/personas", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setPersonas(data);
-        }
-      } catch (err) {} finally {
-        setLoading(false);
-      }
-    };
-    fetchPersonas();
-  }, [router]);
-
   const filteredPersonas = useMemo(() => {
     return personas.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                            p.traits.toLowerCase().includes(search.toLowerCase());
-      
-      const traitsLower = p.traits.toLowerCase();
-      const matchesGender = filters.gender === "all" || traitsLower.includes(filters.gender);
+      const traitsLower = (p.traits || "").toLowerCase();
+      const nameLower = (p.name || "").toLowerCase();
+      const toneLower = (p.tone || "").toLowerCase();
+      const genderLower = (p.gender || "").toLowerCase();
+      const searchLower = search.toLowerCase();
+
+      const matchesSearch = search === "" || nameLower.includes(searchLower) || traitsLower.includes(searchLower);
+      const matchesGender = filters.gender === "all" || genderLower === filters.gender.toLowerCase() || traitsLower.includes(filters.gender);
       const matchesAge = filters.age === "all" || traitsLower.includes(filters.age.replace("-", " "));
-      const matchesCategory = filters.category === "all" || p.tone.toLowerCase() === filters.category;
+      const matchesCategory = filters.category === "all" || toneLower.includes(filters.category) || traitsLower.includes(filters.category);
 
       return matchesSearch && matchesGender && matchesAge && matchesCategory;
     });
@@ -65,8 +65,8 @@ export default function ExploreAI() {
   return (
     <div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] font-sans text-white p-6 md:p-8 flex flex-col h-screen overflow-hidden">
       <nav className="mb-6 flex items-center justify-between shrink-0">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="text-[#cbd5f5] hover:text-[#a78bfa] transition-colors flex items-center gap-2 font-medium"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -86,7 +86,7 @@ export default function ExploreAI() {
                 <svg className="w-5 h-5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
                 Filters
               </h2>
-              
+
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-3">
                   <label className="text-[#cbd5f5] text-sm font-semibold">Category</label>
@@ -177,16 +177,16 @@ export default function ExploreAI() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredPersonas.map((persona) => (
-                  <div 
+                  <div
                     key={persona.id}
                     onClick={() => handleSelect(persona.id)}
-                    className="group bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden backdrop-blur-xl hover:-translate-y-2 hover:shadow-[0_15px_30px_rgba(124,58,237,0.2)] transition-all duration-300 cursor-pointer flex flex-col h-[320px]"
+                    className="group bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col h-[320px]"
                   >
                     <div className="h-40 w-full relative overflow-hidden bg-[rgba(0,0,0,0.3)]">
                       {persona.avatarUrl ? (
-                        <img 
-                          src={persona.avatarUrl} 
-                          alt={persona.name} 
+                        <img
+                          src={persona.avatarUrl}
+                          alt={persona.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (

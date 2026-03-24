@@ -62,7 +62,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen flex bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] font-sans">
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24">
+      <div className="w-full flex items-center justify-center p-8 sm:p-12">
         <div className="w-full max-w-md p-8 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl shadow-[0_0_40px_rgba(124,58,237,0.15)]">
           <h1 className="text-3xl font-bold mb-2 text-white text-center">Create an Account</h1>
           <p className="text-[#cbd5f5] mb-8 text-center text-sm">Join the digital legacy today.</p>
@@ -153,16 +153,6 @@ export default function SignUp() {
         </div>
       </div>
 
-      <div className="hidden lg:flex lg:w-1/2 relative p-8">
-        <div className="w-full h-full rounded-[2rem] overflow-hidden border border-[rgba(255,255,255,0.1)] shadow-[0_0_40px_rgba(124,58,237,0.2)]">
-          <img
-            src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
-            alt="Digital Legacy"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-x-8 bottom-8 top-8 rounded-[2rem] bg-gradient-to-t from-[#0f172a] via-transparent to-transparent pointer-events-none" />
-        </div>
-      </div>
     </div>
   );
 }

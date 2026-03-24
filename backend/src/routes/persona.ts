@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 
 export default async function personaRoutes(fastify: FastifyInstance) {
   fastify.post('/', { preValidation: [fastify.authenticate] }, async (request, reply) => {
-    const { name, traits, tone, avatarUrl } = request.body as any
+    const { name, traits, tone, gender, avatarUrl } = request.body as any
     if (!name || !traits || !tone) return reply.status(400).send({ error: 'Name, traits, and tone are required' })
 
     try {
@@ -11,6 +11,7 @@ export default async function personaRoutes(fastify: FastifyInstance) {
           name,
           traits,
           tone,
+          gender,
           avatarUrl,
           userId: request.user.id
         }

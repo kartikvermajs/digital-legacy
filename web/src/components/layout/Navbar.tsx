@@ -11,12 +11,7 @@ export default function Navbar() {
       <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa]">
         Digital Legacy
       </div>
-      <div className="hidden md:flex items-center gap-8">
-        <Link href="/dashboard" className="text-white font-medium hover:text-[#a78bfa] transition-colors">Home</Link>
-        <Link href="/dashboard/explore" className="text-[#cbd5f5] hover:text-white transition-colors">AI</Link>
-        <Link href="/dashboard/settings" className="text-[#cbd5f5] hover:text-white transition-colors">Settings</Link>
-        <Link href="/support" className="text-[#cbd5f5] hover:text-white transition-colors">Support</Link>
-      </div>
+      <div className="flex-1"></div>
       <div className="flex items-center gap-4">
         {user ? (
           <Link href="/dashboard/settings">

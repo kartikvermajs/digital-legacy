@@ -24,8 +24,14 @@ export default async function avatarRoutes(fastify: FastifyInstance) {
         )
         data.file.pipe(uploadStream)
       })
+      const url = (uploadResult as any).secure_url
 
-      return { url: (uploadResult as any).secure_url }
+      await fastify.prisma.user.update({
+        where: { id: request.user.id },
+        data: { avatarUrl: url }
+      })
+
+      return { url }
     } catch (err) {
       fastify.log.error(err)
       return reply.status(500).send({ error: 'Upload failed' })

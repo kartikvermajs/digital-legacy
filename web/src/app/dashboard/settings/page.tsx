@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 interface UserProfile {
   name: string;
@@ -23,6 +24,8 @@ export default function Settings() {
     avatarUrl: "",
   });
   
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
   const [preferences, setPreferences] = useState({
     darkMode: true,
     notifications: true,
@@ -30,29 +33,33 @@ export default function Settings() {
 
   const [message, setMessage] = useState<{type: "error" | "success", text: string} | null>(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return router.push("/login");
+  const { data: userData, isLoading: isValidatingMe } = useQuery({
+    queryKey: ['me'],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        throw new Error("No token");
+      }
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    }
+  });
 
-        const res = await fetch("/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          setProfile(prev => ({
-            ...prev,
-            email: data.email || "",
-            name: data.name || "",
-            avatarUrl: data.avatarUrl || "",
-          }));
-        }
-      } catch (err) {}
-    };
-    fetchProfile();
-  }, [router]);
+  useEffect(() => {
+    if (userData) {
+      setProfile({
+        email: userData.email || "",
+        name: userData.name || "",
+        birthday: userData.birthday || "",
+        gender: userData.gender || "Not specified",
+        avatarUrl: userData.avatarUrl || "",
+      });
+    }
+  }, [userData]);
 
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,12 +89,13 @@ export default function Settings() {
     if (!file) return;
 
     setMessage(null);
+    setUploadingAvatar(true);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/avatar", {
+      const res = await fetch("/api/avatar/upload", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -102,6 +110,8 @@ export default function Settings() {
       setMessage({ type: "success", text: "Avatar uploaded successfully." });
     } catch (err) {
       setMessage({ type: "error", text: "Failed to upload avatar." });
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -150,7 +160,12 @@ export default function Settings() {
             </div>
             
             <div className="relative group shrink-0">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.3)] shadow-[0_0_20px_rgba(124,58,237,0.3)] group-hover:border-[#a78bfa] transition-all">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.3)] shadow-[0_0_20px_rgba(124,58,237,0.3)] group-hover:border-[#a78bfa] transition-all relative">
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10">
+                    <div className="w-8 h-8 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
                 {profile.avatarUrl ? (
                   <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (

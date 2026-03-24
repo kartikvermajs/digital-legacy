@@ -11,6 +11,7 @@ import voiceRoutes from './routes/voice.js'
 import chatRoutes from './routes/chat.js'
 import ttsRoutes from './routes/tts.js'
 import websocketRoutes from './routes/websocket.js'
+import userRoutes from './routes/user.js'
 import multipart from '@fastify/multipart'
 
 dotenv.config()
@@ -30,6 +31,7 @@ fastify.register(voiceRoutes, { prefix: '/api/voice' })
 fastify.register(chatRoutes, { prefix: '/api/chat' })
 fastify.register(ttsRoutes, { prefix: '/api/tts' })
 fastify.register(websocketRoutes, { prefix: '/api/ws' })
+fastify.register(userRoutes, { prefix: '/api/user' })
 
 fastify.get('/ping', async (request, reply) => {
   return { status: 'ok', message: 'pong' }
