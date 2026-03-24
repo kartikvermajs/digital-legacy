@@ -1,71 +1,181 @@
 "use client";
-import { useState, useRef } from 'react';
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface Persona {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+interface Stats {
+  timeSpent: string;
+  characters: number;
+}
 
 export default function Dashboard() {
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [stats, setStats] = useState<Stats>({ timeSpent: "0h", characters: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const toggleRecording = async () => {
-    if (isRecording) {
-      mediaRecorder.current?.stop();
-      setIsRecording(false);
-    } else {
+  useEffect(() => {
+    const fetchDashboardData = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder.current = new MediaRecorder(stream);
-        mediaRecorder.current.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            // Buffer to send over WebSockets
-            console.log("Audio chunk generated:", e.data.size, "bytes");
-          }
-        };
-        mediaRecorder.current.start(250); // Small chunks
-        setIsRecording(true);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const userRes = await fetch("/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!userRes.ok) throw new Error("Unauthorized");
+        const userData = await userRes.json();
+        setUser(userData);
+
+        const personasRes = await fetch("/api/personas", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (personasRes.ok) {
+          const personasData = await personasRes.json();
+          setPersonas(personasData);
+          setStats({
+            timeSpent: "12h 45m",
+            characters: personasData.length || 0,
+          });
+        }
       } catch (err) {
-        console.error("Error accessing microphone:", err);
-        alert("Failed to access microphone.");
+        router.push("/login");
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
+
+    fetchDashboardData();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <main className="flex flex-col min-h-screen bg-slate-900 justify-between items-center py-12 px-6">
-      <div className="flex flex-col items-center mt-12">
-        <img 
-          src="https://via.placeholder.com/150" 
-          alt="AI Avatar" 
-          className="w-40 h-40 rounded-full border-4 border-indigo-500 object-cover animate-breathe"
-        />
-        <h2 className="text-white text-3xl font-bold mt-8 tracking-tight">AI Companion</h2>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md">
-        {isRecording ? (
-          <div className="h-32 w-full bg-indigo-500/10 rounded-2xl flex flex-col justify-center items-center overflow-hidden border border-indigo-500/20">
-             <span className="text-indigo-400 font-semibold mb-4 tracking-widest text-sm uppercase">LISTENING...</span>
-             <div className="flex items-end h-10 gap-1.5">
-                <div className="w-1.5 h-6 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.0s' }}></div>
-                <div className="w-1.5 h-10 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                <div className="w-1.5 h-5 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-                <div className="w-1.5 h-8 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.45s' }}></div>
-                <div className="w-1.5 h-4 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.6s' }}></div>
-             </div>
+    <div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] font-sans text-white">
+      <nav className="flex items-center justify-between px-8 py-5 border-b border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] backdrop-blur-xl sticky top-0 z-50">
+        <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa]">
+          Digital Legacy
+        </div>
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" className="text-white font-medium hover:text-[#a78bfa] transition-colors">Home</Link>
+          <Link href="/dashboard/ai" className="text-[#cbd5f5] hover:text-white transition-colors">AI</Link>
+          <Link href="/dashboard/settings" className="text-[#cbd5f5] hover:text-white transition-colors">Settings</Link>
+          <Link href="/support" className="text-[#cbd5f5] hover:text-white transition-colors">Support</Link>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] flex items-center justify-center font-bold shadow-[0_0_10px_#7c3aed]">
+            {user?.email?.charAt(0).toUpperCase() || "U"}
           </div>
-        ) : (
-          <p className="text-slate-400 font-medium text-center text-lg">Click the mic to start speaking</p>
-        )}
-      </div>
+        </div>
+      </nav>
 
-      <button 
-        onClick={toggleRecording}
-        className={`w-24 h-24 rounded-full flex items-center justify-center mb-8 text-4xl shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 ${
-          isRecording 
-            ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' 
-            : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30'
-        }`}
-      >
-        🎤
-      </button>
-    </main>
+      <main className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 flex flex-col gap-10">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Welcome back, {user?.name || user?.email?.split('@')[0] || "User"}</h1>
+            <p className="text-[#cbd5f5] text-lg">Your legacy is growing. Select a persona or start a new interaction.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl shadow-[0_0_20px_rgba(124,58,237,0.1)] transition-transform hover:-translate-y-1">
+              <h3 className="text-[#cbd5f5] text-sm font-medium mb-1">Total Time Spent</h3>
+              <p className="text-3xl font-bold text-white tracking-tight">{stats.timeSpent}</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl shadow-[0_0_20px_rgba(124,58,237,0.1)] transition-transform hover:-translate-y-1">
+              <h3 className="text-[#cbd5f5] text-sm font-medium mb-1">Active Characters</h3>
+              <p className="text-3xl font-bold text-white tracking-tight">{stats.characters}</p>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Your AI Characters</h2>
+              <button className="text-[#8b5cf6] hover:text-[#a78bfa] text-sm font-medium transition-colors">View All</button>
+            </div>
+
+            {personas.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] text-center text-[#cbd5f5]">
+                No characters found. Create your first AI companion to get started.
+              </div>
+            ) : (
+              <div className="flex gap-5 overflow-x-auto pb-6 snap-x">
+                {personas.map((persona) => (
+                  <div key={persona.id} className="min-w-[160px] snap-start flex flex-col items-center p-5 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl transition-all hover:-translate-y-2 hover:shadow-[0_0_25px_rgba(167,139,250,0.3)] cursor-pointer group">
+                    <div className="w-20 h-20 rounded-full overflow-hidden mb-4 border-2 border-[rgba(255,255,255,0.1)] group-hover:border-[#a78bfa] transition-colors bg-[rgba(0,0,0,0.2)]">
+                      {persona.avatarUrl ? (
+                        <img src={persona.avatarUrl} alt={persona.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1e1b4b] to-[#4c1d95] text-2xl font-bold">
+                          {persona.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-semibold text-lg truncate w-full text-center">{persona.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="p-8 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl sticky top-28 shadow-[0_0_30px_rgba(124,58,237,0.15)] flex flex-col gap-4">
+            <h3 className="text-xl font-bold mb-2">Quick Actions</h3>
+            
+            <button
+              onClick={() => router.push("/dashboard/call")}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] rounded-[12px] text-white font-semibold flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(124,58,237,0.39)] hover:shadow-[0_0_20px_#a78bfa] hover:-translate-y-0.5 transition-all duration-200"
+            >
+              Start Call
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/create")}
+              className="w-full py-3.5 px-4 bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.15)] rounded-[12px] text-white font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+            >
+              Create AI
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/explore")}
+              className="w-full py-3.5 px-4 bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.15)] rounded-[12px] text-white font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+            >
+              Explore AI
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/settings")}
+              className="w-full py-3.5 px-4 bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.15)] rounded-[12px] text-white font-semibold flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+            >
+              Settings
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
