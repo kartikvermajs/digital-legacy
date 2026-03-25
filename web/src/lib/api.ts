@@ -41,5 +41,8 @@ export const api = {
       formData.append("file", file);
       return fetchApi("/avatar/upload", { method: "POST", body: formData });
     }
+  },
+  session: {
+    create: (data: any) => fetchApi("/session/create", { method: "POST", body: JSON.stringify(data) }),
   }
 };

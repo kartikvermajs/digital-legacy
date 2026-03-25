@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { PREBUILT_PERSONAS } from "@/lib/personas";
 
 interface Persona {
   id: string;
@@ -12,6 +14,8 @@ interface Persona {
   traits: string;
   tone: string;
   gender: string | null;
+  isPrebuilt?: boolean;
+  prebuiltId?: string | null;
 }
 
 export default function ExploreAI() {
@@ -32,9 +36,19 @@ export default function ExploreAI() {
     }
   });
 
-  const personas = fetchPersonas || [];
+  const personas: Persona[] = useMemo(() => {
+    const userPersonas = fetchPersonas || [];
+    const prebuilt = PREBUILT_PERSONAS.map(p => ({ ...p, isPrebuilt: true }));
+    // Filter out prebuilt personas that the user has already synced to avoid duplicates by matching name
+    // (A better way is by prebuiltId, but the frontend only has name and id for now)
+    const syncedNames = new Set(userPersonas.filter(u => u.prebuiltId).map(u => u.name));
+    const uniquePrebuilts = prebuilt.filter(p => !syncedNames.has(p.name));
+    
+    return [...userPersonas, ...uniquePrebuilts];
+  }, [fetchPersonas]);
 
   const [search, setSearch] = useState("");
+  const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     gender: "all",
     age: "all",
@@ -58,8 +72,30 @@ export default function ExploreAI() {
     });
   }, [personas, search, filters]);
 
-  const handleSelect = (id: string) => {
-    router.push(`/dashboard/call?persona=${id}`);
+  const handleSelect = async (persona: Persona) => {
+    if (activePersonaId) return; // Prevent duplicate clicks
+    
+    setActivePersonaId(persona.id);
+    try {
+      // Store persona temporarily in sessionStorage so the call screen can pick it up without refetching
+      sessionStorage.setItem('activePersona', JSON.stringify(persona));
+      
+      const res = await api.session.create({
+        personaId: persona.id,
+        isPrebuilt: persona.isPrebuilt,
+        name: persona.name,
+        traits: persona.traits,
+        tone: persona.tone,
+        gender: persona.gender,
+        avatarUrl: persona.avatarUrl
+      });
+      
+      router.push(`/dashboard/call?sessionId=${res.sessionId}&personaId=${res.activePersonaId}`);
+    } catch (err) {
+      console.error("Failed to create session", err);
+      alert("Failed to start session. Please try again.");
+      setActivePersonaId(null);
+    }
   };
 
   return (
@@ -179,9 +215,15 @@ export default function ExploreAI() {
                 {filteredPersonas.map((persona) => (
                   <div
                     key={persona.id}
-                    onClick={() => handleSelect(persona.id)}
-                    className="group bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col h-[320px]"
+                    onClick={() => handleSelect(persona)}
+                    className="group bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col h-[320px] relative"
                   >
+                    {activePersonaId === persona.id && (
+                      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
+                        <div className="w-10 h-10 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <span className="font-semibold text-white">Starting Call...</span>
+                      </div>
+                    )}
                     <div className="h-40 w-full relative overflow-hidden bg-[rgba(0,0,0,0.3)]">
                       {persona.avatarUrl ? (
                         <img

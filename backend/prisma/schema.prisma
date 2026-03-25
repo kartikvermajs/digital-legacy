@@ -34,6 +34,7 @@ model Persona {
   tone        String
   gender      String?
   avatarUrl   String?
+  prebuiltId  String?   // Added stable unique identifier for prebuilt personas
   createdAt   DateTime  @default(now())
 
   sessions    Session[]

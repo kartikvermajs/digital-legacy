@@ -1,8 +1,10 @@
 "use client";
-
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import { PREBUILT_PERSONAS } from "@/lib/personas";
 
 interface User {
   id: string;
@@ -14,6 +16,10 @@ interface Persona {
   id: string;
   name: string;
   avatarUrl: string | null;
+  traits?: string;
+  tone?: string;
+  gender?: string | null;
+  isPrebuilt?: boolean;
 }
 
 interface Stats {
@@ -55,9 +61,42 @@ export default function Dashboard() {
     }
   });
 
+  const allPersonas = (personas || []).concat(
+    PREBUILT_PERSONAS.map(p => ({ ...p, isPrebuilt: true }))
+  );
+  // Simple deduplication for dashboard display
+  const uniquePersonas = Array.from(new Map(allPersonas.map(p => [p.name, p])).values());
+
   const stats = {
     timeSpent: "12h 45m",
-    characters: personas.length || 0,
+    characters: uniquePersonas.length || 0,
+  };
+
+  const [activePersonaId, setActivePersonaId] = useState<string | null>(null);
+
+  const handleSelect = async (persona: Persona) => {
+    if (activePersonaId) return;
+    
+    setActivePersonaId(persona.id);
+    try {
+      sessionStorage.setItem('activePersona', JSON.stringify(persona));
+      
+      const res = await api.session.create({
+        personaId: persona.id,
+        isPrebuilt: persona.isPrebuilt,
+        name: persona.name,
+        traits: persona.traits,
+        tone: persona.tone,
+        gender: persona.gender,
+        avatarUrl: persona.avatarUrl
+      });
+      
+      router.push(`/dashboard/call?sessionId=${res.sessionId}&personaId=${res.activePersonaId}`);
+    } catch (err) {
+      console.error("Failed to create session", err);
+      alert("Failed to start session. Please try again.");
+      setActivePersonaId(null);
+    }
   };
 
   const loading = userLoading || personasLoading;
@@ -114,8 +153,13 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="flex gap-5 overflow-x-auto pb-6 snap-x">
-                {personas.map((persona) => (
-                  <div key={persona.id} className="min-w-[160px] snap-start flex flex-col items-center p-5 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl transition-all cursor-pointer group">
+                {uniquePersonas.map((persona) => (
+                  <div key={persona.id} onClick={() => handleSelect(persona)} className="min-w-[160px] snap-start flex flex-col items-center p-5 rounded-2xl bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] backdrop-blur-xl transition-all cursor-pointer group relative overflow-hidden">
+                    {activePersonaId === persona.id && (
+                      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-20 flex items-center justify-center rounded-2xl">
+                        <div className="w-8 h-8 border-4 border-[#7c3aed] border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                     <div className="w-20 h-20 rounded-full overflow-hidden mb-4 border-2 border-[rgba(255,255,255,0.1)] group-hover:border-[#a78bfa] transition-colors bg-[rgba(0,0,0,0.2)]">
                       {persona.avatarUrl ? (
                         <img src={persona.avatarUrl} alt={persona.name} className="w-full h-full object-cover" />

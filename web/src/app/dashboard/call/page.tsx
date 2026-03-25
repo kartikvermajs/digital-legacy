@@ -1,27 +1,41 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function CallScreen() {
+function CallScreenContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('sessionId');
+  
+  const [persona, setPersona] = useState<any>(null);
+  
   const [time, setTime] = useState(0);
   const [isMicOn, setIsMicOn] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isCcon, setIsCcon] = useState(true);
-  const [subtitles, setSubtitles] = useState("");
+  const [subtitles, setSubtitles] = useState("Connecting...");
   const [ws, setWs] = useState<WebSocket | null>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const audioQueueRef = useRef<Float32Array[]>([]);
+  const speechRecognitionRef = useRef<any>(null);
+  const audioQueueRef = useRef<AudioBuffer[]>([]);
   const isPlayingRef = useRef(false);
 
   useEffect(() => {
+    // Load persona from session storage (populated from dashboard/explore before navigation)
+    const cachedPersona = sessionStorage.getItem('activePersona');
+    if (cachedPersona) {
+      setPersona(JSON.parse(cachedPersona));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
     const timer = setInterval(() => setTime((t) => t + 1), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [sessionId]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -38,14 +52,11 @@ export default function CallScreen() {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
-      const audioData = audioQueueRef.current.shift();
-      if (!audioData) {
+      const audioBuffer = audioQueueRef.current.shift();
+      if (!audioBuffer) {
         isPlayingRef.current = false;
         return;
       }
-
-      const audioBuffer = audioContextRef.current.createBuffer(1, audioData.length, 24000);
-      audioBuffer.getChannelData(0).set(audioData);
 
       const source = audioContextRef.current.createBufferSource();
       source.buffer = audioBuffer;
@@ -58,19 +69,25 @@ export default function CallScreen() {
 
       source.start();
     } catch (err) {
+      console.error("Error playing audio", err);
       isPlayingRef.current = false;
       playNextAudio();
     }
   }, []);
 
   useEffect(() => {
+    if (!sessionId) {
+      setSubtitles("Error: No session ID provided");
+      return;
+    }
+
     const initWebSocket = () => {
-      const socket = new WebSocket(`ws://localhost:3001/api/ws/conversation/current-session`);
+      const socket = new WebSocket(`ws://localhost:3001/api/ws/conversation/${sessionId}`);
       
       socket.binaryType = "arraybuffer";
 
       socket.onopen = () => {
-        setSubtitles("Connected. Say something...");
+        setSubtitles("Tap mic to start speaking");
       };
 
       socket.onmessage = async (event) => {
@@ -90,10 +107,12 @@ export default function CallScreen() {
             if (!audioContextRef.current) {
               audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
             }
-            const audioData = await audioContextRef.current.decodeAudioData(event.data);
-            audioQueueRef.current.push(audioData.getChannelData(0));
+            const audioBuffer = await audioContextRef.current.decodeAudioData(event.data);
+            audioQueueRef.current.push(audioBuffer);
             playNextAudio();
-          } catch (e) {}
+          } catch (e) {
+            console.error("Failed to decode audio", e);
+          }
         }
       };
 
@@ -109,7 +128,7 @@ export default function CallScreen() {
 
     return () => {
       if (ws) {
-        ws.onclose = null;
+        ws.onclose = null; // prevent reconnect loop on unmount
         ws.close();
       }
       if (audioContextRef.current?.state !== "closed") {
@@ -117,35 +136,57 @@ export default function CallScreen() {
       }
       stopRecording();
     };
-  }, [playNextAudio]);
+  }, [playNextAudio, sessionId]);
 
-  const startRecording = async () => {
+  const startRecording = () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Your browser does not support Speech Recognition. Try Chrome or Safari.");
+        return;
+      }
       
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
-          ws.send(e.data);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      
+      recognition.onstart = () => {
+        setIsMicOn(true);
+        setSubtitles("Listening...");
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
+          .join('');
+          
+        setSubtitles(`You: ${transcript}`);
+        
+        if (event.results[0].isFinal && ws?.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ event: 'stt_result', text: transcript }));
         }
       };
 
-      mediaRecorder.start(250);
-      mediaRecorderRef.current = mediaRecorder;
-      setIsMicOn(true);
-    } catch (err) {}
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsMicOn(false);
+      };
+
+      recognition.onend = () => {
+        setIsMicOn(false);
+      };
+
+      recognition.start();
+      speechRecognitionRef.current = recognition;
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ event: "stop_audio" }));
+    if (speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
     }
     setIsMicOn(false);
   };
@@ -183,12 +224,18 @@ export default function CallScreen() {
       <div className="flex-1 w-full flex flex-col items-center justify-center z-10">
         <div className="relative group">
           <div className="absolute -inset-4 bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity animate-breathe" />
-          <div className="w-64 h-64 md:w-80 md:h-80 rounded-full border-4 border-[rgba(255,255,255,0.1)] overflow-hidden relative shadow-[0_0_40px_rgba(124,58,237,0.3)] bg-[#1e1b4b]">
-            <img 
-              src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop" 
-              alt="AI Avatar" 
-              className="w-full h-full object-cover transition-transform duration-1000 origin-center hover:scale-105"
-            />
+          <div className="w-64 h-64 md:w-80 md:h-80 rounded-full border-4 border-[rgba(255,255,255,0.1)] overflow-hidden relative shadow-[0_0_40px_rgba(124,58,237,0.3)] bg-[#1e1b4b] flex items-center justify-center">
+            {persona?.avatarUrl ? (
+              <img 
+                src={persona.avatarUrl} 
+                alt={persona.name || "AI Avatar"} 
+                className="w-full h-full object-cover transition-transform duration-1000 origin-center hover:scale-105"
+              />
+            ) : persona?.name ? (
+              <span className="text-8xl font-bold text-white/50">{persona.name.charAt(0)}</span>
+            ) : (
+              <span className="text-8xl font-bold text-white/50">AI</span>
+            )}
           </div>
         </div>
 
@@ -243,5 +290,13 @@ export default function CallScreen() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CallScreen() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] font-sans text-white flex items-center justify-center">Loading Call...</div>}>
+      <CallScreenContent />
+    </Suspense>
   );
 }
