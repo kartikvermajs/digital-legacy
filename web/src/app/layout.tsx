@@ -3,6 +3,7 @@ import "./globals.css";
 
 import QueryProvider from "../providers/QueryProvider";
 import { AppProvider } from "../context/AppContext";
+import AudioUnlock from "@/components/audioUnlock";
 
 export const metadata: Metadata = {
   title: "Digital Legacy",
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           <AppProvider>
+            <AudioUnlock />
             {children}
           </AppProvider>
         </QueryProvider>

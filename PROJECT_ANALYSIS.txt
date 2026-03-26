@@ -1,0 +1,583 @@
+================================================================================
+                    DIGITAL LEGACY — FULL PROJECT ANALYSIS
+================================================================================
+Generated: 2026-03-26
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Digital Legacy is an AI Voice Companion platform that allows users to create,
+customize, and converse with AI personas through real-time voice and text
+interactions. Users can build custom AI characters with unique personalities,
+or select from prebuilt ones, and then engage in live voice conversations
+powered by multiple AI services.
+
+The project is a full-stack monorepo with three workspaces:
+  • backend/   — Fastify REST API + WebSocket server (TypeScript)
+  • web/       — Next.js 16 web application (React 19, TypeScript)
+  • mobile/    — Expo/React Native mobile app (TypeScript)
+
+
+================================================================================
+2. CURRENT CAPABILITIES
+================================================================================
+
+2.1  USER AUTHENTICATION & MANAGEMENT
+  - Email/password signup with bcrypt hashing
+  - Email/password login with JWT token generation
+  - Authenticated session management via JWT tokens
+  - User profile management (name, email, birthday, gender, avatar)
+  - Logout functionality (client-side token removal)
+
+2.2  AI PERSONA SYSTEM
+  - Create custom AI characters with: name, traits, tone, gender, age group
+  - Character types: Mentor, Friend, Expert, Historical Figure
+  - 4 prebuilt personas shipped out-of-the-box:
+      • Aurelius — Stoic mentor for personal growth
+      • Dr. Lilian — Technology/science expert
+      • Alex — Empathetic, cheerful friend
+      • Ada — Historical figure, logical/poetic thinker
+  - Prebuilt persona auto-sync: when a user selects a prebuilt persona, it
+    gets cloned into their personal database records
+  - Race-condition-safe deduplication for prebuilt personas
+  - Explore page with search, filtering by gender/age/category
+
+2.3  AI CHAT (TEXT-BASED, STREAMING)
+  - Send text messages to an AI persona within a session
+  - AI responses streamed in real-time via Server-Sent Events (SSE)
+  - Chat history stored in database (last 20 messages used as context)
+  - System prompt dynamically built from persona traits/tone
+  - Model: meta-llama/llama-3-8b-instruct:free (via OpenRouter)
+
+2.4  REAL-TIME VOICE CONVERSATION (WebSocket)
+  - Full-duplex WebSocket connection per session
+  - Browser-native Speech Recognition (Web Speech API) for voice input
+  - Speech-to-text results sent to server over WebSocket
+  - Server generates AI response via streaming (OpenRouter)
+  - AI text chunks streamed back to client in real-time
+  - Text cleaned for TTS (markdown symbols stripped, capped at 300 chars)
+  - Client-side text-to-speech using browser SpeechSynthesis API
+  - Also supports ElevenLabs TTS via dedicated endpoint
+  - Auto-reconnection on connection loss (3-second retry)
+  - Single active connection enforcement per session
+  - Audio queue system for sequential playback
+  - Model: openrouter/auto (via OpenRouter, max 150 tokens, temp 0.7)
+
+2.5  VOICE TRANSCRIPTION (Speech-to-Text)
+  - Upload audio files for server-side transcription
+  - Uses OpenAI Whisper-1 model
+  - Temp file handling with automatic cleanup
+
+2.6  TEXT-TO-SPEECH (TTS)
+  - Convert text to speech audio via ElevenLabs API
+  - Model: eleven_turbo_v2_5
+  - Streamed audio response (chunked transfer encoding)
+  - Configurable voice ID (default: 21m00Tcm4TlvDq8ikWAM)
+
+2.7  AVATAR SYSTEM
+  - Manual avatar upload to Cloudinary (image hosting)
+  - AI-powered avatar generation using Replicate (Stability AI SDXL)
+    with prompt: "highly detailed 3d render of the person as a futuristic
+    AI digital avatar, cyber aesthetic, cinematic lighting, portrait"
+  - Avatar URL stored in user profile
+
+2.8  SESSION MANAGEMENT
+  - Create conversation sessions tied to a user and persona
+  - Support for both user-created and prebuilt personas
+  - Session ID used to scope WebSocket connections and message history
+
+2.9  WEB FRONTEND PAGES
+  - Landing page → redirects to /login
+  - Login page — email/password authentication
+  - Signup page — full registration with terms agreement
+  - Dashboard — stats overview, persona carousel, quick actions
+  - Call page — full-screen voice call UI with:
+      • Real-time subtitles/captions (toggleable CC)
+      • Microphone toggle
+      • Camera toggle (UI only, not functional)
+      • Call timer
+      • Avatar display with breathing glow animation
+      • End call button
+  - Create AI page — form to design custom AI companions
+  - Explore AI page — browse/search/filter all available personas
+  - Settings page — profile editing, avatar upload, preferences
+    (dark mode toggle, notification toggle), logout
+
+2.10 MOBILE APP (Expo/React Native)
+  - Authentication screens (login/signup) using Axios
+  - Secure token storage via expo-secure-store
+  - Tab-based navigation with explore and home tabs
+  - NativeWind (TailwindCSS) styling
+  - Haptic feedback support
+  - Themed components (dark/light mode)
+  - Parallax scroll view components
+
+
+================================================================================
+3. TECH STACK
+================================================================================
+
+3.1  BACKEND
+  ┌─────────────────────┬─────────────────────────────────────┐
+  │ Technology          │ Purpose                             │
+  ├─────────────────────┼─────────────────────────────────────┤
+  │ Fastify 5.8         │ HTTP server framework               │
+  │ TypeScript 6        │ Language                            │
+  │ Prisma 5.22         │ ORM / database access               │
+  │ PostgreSQL (Neon)   │ Database (serverless Postgres)       │
+  │ @fastify/jwt 10     │ JWT authentication                  │
+  │ @fastify/cors 11    │ CORS middleware                     │
+  │ @fastify/websocket  │ WebSocket support                   │
+  │ @fastify/multipart  │ File upload handling                │
+  │ bcryptjs 3          │ Password hashing                    │
+  │ dotenv              │ Environment variables               │
+  │ tsx                 │ TypeScript execution (dev)           │
+  │ openai SDK 6        │ OpenAI + OpenRouter API client      │
+  │ replicate SDK 1.4   │ Replicate API client                │
+  │ cloudinary SDK 2.9  │ Cloudinary upload/management        │
+  │ ws 8.20             │ WebSocket library                   │
+  └─────────────────────┴─────────────────────────────────────┘
+
+3.2  WEB FRONTEND
+  ┌─────────────────────┬─────────────────────────────────────┐
+  │ Technology          │ Purpose                             │
+  ├─────────────────────┼─────────────────────────────────────┤
+  │ Next.js 16          │ React framework (App Router)        │
+  │ React 19            │ UI library                          │
+  │ TypeScript 5        │ Language                            │
+  │ TailwindCSS 4       │ Utility-first CSS framework         │
+  │ TanStack Query 5    │ Server state / caching (5min stale) │
+  │ React Compiler      │ Auto-memoization (babel plugin)     │
+  │ Web Speech API      │ Browser-native speech recognition   │
+  │ SpeechSynthesis API │ Browser-native text-to-speech       │
+  │ WebSocket API       │ Real-time communication             │
+  │ Web Audio API       │ Audio playback / decoding           │
+  └─────────────────────┴─────────────────────────────────────┘
+
+3.3  MOBILE APP
+  ┌─────────────────────┬─────────────────────────────────────┐
+  │ Technology          │ Purpose                             │
+  ├─────────────────────┼─────────────────────────────────────┤
+  │ Expo SDK 54         │ React Native framework              │
+  │ React Native 0.81   │ Cross-platform mobile framework     │
+  │ Expo Router 6       │ File-based routing                  │
+  │ React 19            │ UI library                          │
+  │ TypeScript 5.9      │ Language                            │
+  │ NativeWind 4        │ TailwindCSS for React Native        │
+  │ Axios               │ HTTP client                         │
+  │ expo-secure-store   │ Secure token storage                │
+  │ expo-haptics        │ Haptic feedback                     │
+  │ expo-image          │ Optimized image component           │
+  │ React Navigation 7  │ Navigation (tabs, stack)            │
+  │ Reanimated 4        │ Animations                          │
+  │ Gesture Handler     │ Touch gesture handling              │
+  └─────────────────────┴─────────────────────────────────────┘
+
+
+================================================================================
+4. EXTERNAL APIs & SERVICES
+================================================================================
+
+  ┌──────────────────────┬──────────────────────────────────────────────────┐
+  │ Service              │ Usage                                            │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ OpenRouter           │ AI chat completions (LLM routing service)        │
+  │                      │ Models: llama-3-8b-instruct, openrouter/auto     │
+  │                      │ Endpoint: https://openrouter.ai/api/v1           │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ OpenAI               │ Audio transcription (Whisper-1 model)            │
+  │                      │ Used via official openai SDK                     │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ ElevenLabs           │ Text-to-Speech generation                        │
+  │                      │ Model: eleven_turbo_v2_5                         │
+  │                      │ Streaming audio endpoint                         │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ Replicate            │ AI avatar generation                             │
+  │                      │ Model: stability-ai/sdxl                         │
+  │                      │ Image-to-image with custom prompt                │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ Cloudinary           │ Image hosting / CDN                              │
+  │                      │ Folder: digital_legacy_avatars                   │
+  │                      │ Stream upload from multipart                     │
+  ├──────────────────────┼──────────────────────────────────────────────────┤
+  │ Neon (PostgreSQL)    │ Serverless PostgreSQL database                   │
+  │                      │ Region: us-east-1 (AWS)                          │
+  │                      │ Connection pooling enabled                       │
+  └──────────────────────┴──────────────────────────────────────────────────┘
+
+
+================================================================================
+5. DATABASE SCHEMA (Prisma / PostgreSQL)
+================================================================================
+
+  Model: User
+  ├── id         String    @id @default(uuid())
+  ├── email      String    @unique
+  ├── password   String
+  ├── name       String?
+  ├── phone      String?
+  ├── birthday   String?
+  ├── gender     String?
+  ├── avatarUrl  String?
+  ├── createdAt  DateTime  @default(now())
+  ├── personas   Persona[]  (1:many)
+  └── sessions   Session[]  (1:many)
+
+  Model: Persona
+  ├── id          String    @id @default(uuid())
+  ├── userId      String    → User.id
+  ├── name        String
+  ├── traits      String
+  ├── tone        String
+  ├── gender      String?
+  ├── avatarUrl   String?
+  ├── prebuiltId  String?   (stable ID for synced prebuilt personas)
+  ├── createdAt   DateTime  @default(now())
+  └── sessions    Session[]  (1:many)
+
+  Model: Session
+  ├── id          String    @id @default(uuid())
+  ├── userId      String    → User.id
+  ├── personaId   String    → Persona.id
+  ├── createdAt   DateTime  @default(now())
+  └── messages    Message[]  (1:many)
+
+  Model: Message
+  ├── id          String    @id @default(uuid())
+  ├── sessionId   String    → Session.id
+  ├── role        String    ("user" | "ai")
+  ├── content     String
+  └── createdAt   DateTime  @default(now())
+
+
+================================================================================
+6. API ENDPOINTS
+================================================================================
+
+  Health Check:
+    GET  /ping                              → { status, message }
+
+  Authentication:
+    POST /api/auth/signup                   → { token, user }
+    POST /api/auth/login                    → { token, user }
+    GET  /api/auth/me          [AUTH]       → User (without password)
+
+  User Profile:
+    PUT  /api/user/update      [AUTH]       → Updated user
+
+  Personas:
+    POST /api/personas         [AUTH]       → Created persona
+    GET  /api/personas         [AUTH]       → Persona[]
+
+  Sessions:
+    POST /api/session/create   [AUTH]       → { sessionId, activePersonaId }
+
+  Chat:
+    POST /api/chat/message     [AUTH]       → SSE stream of AI response
+
+  Voice / Audio:
+    POST /api/voice/transcribe [AUTH]       → { text } (Whisper STT)
+    POST /api/tts/generate     [AUTH]       → audio/mpeg stream
+
+  Avatar:
+    POST /api/avatar/upload    [AUTH]       → { url }
+    POST /api/avatar/generate  [AUTH]       → { url }
+
+  WebSocket:
+    WS   /api/ws/conversation/:sessionId    → Real-time voice conversation
+
+  Note: [AUTH] = requires Bearer token in Authorization header
+
+
+================================================================================
+7. FILE-BY-FILE BREAKDOWN
+================================================================================
+
+─── BACKEND (backend/) ─────────────────────────────────────────────────────
+
+  backend/src/server.ts
+    Main entry point. Creates Fastify instance, registers all plugins
+    (CORS, WebSocket, multipart, Prisma, auth) and all route modules
+    with their API prefixes. Listens on port 3001.
+
+  backend/src/plugins/prisma.ts
+    Fastify plugin that initializes PrismaClient, connects to PostgreSQL,
+    and decorates the Fastify instance with `prisma` for DB access.
+
+  backend/src/plugins/auth.ts
+    Fastify plugin that registers @fastify/jwt with a secret from env,
+    and adds an `authenticate` decorator for route-level auth guards.
+
+  backend/src/routes/auth.ts
+    POST /signup — Creates user with hashed password, returns JWT.
+    POST /login — Validates credentials, returns JWT.
+    GET  /me    — Returns authenticated user's profile (password excluded).
+
+  backend/src/routes/avatar.ts
+    POST /upload   — Uploads image file to Cloudinary, saves URL to user.
+    POST /generate — Takes image URL, generates AI avatar via Replicate
+                     (Stability AI SDXL), saves result to user profile.
+
+  backend/src/routes/chat.ts
+    POST /message — Accepts sessionId + message, saves user message,
+    fetches last 20 messages as context, calls OpenRouter LLM (Llama-3)
+    with streaming, returns SSE response, saves AI reply to DB.
+
+  backend/src/routes/persona.ts
+    POST / — Creates a new persona with name, traits, tone, gender.
+    GET  / — Lists all personas belonging to the authenticated user.
+
+  backend/src/routes/voice.ts
+    POST /transcribe — Accepts audio file upload, saves to temp file,
+    transcribes using OpenAI Whisper-1, returns text, cleans up temp file.
+
+  backend/src/routes/tts.ts
+    POST /generate — Accepts text + optional voiceId, calls ElevenLabs
+    TTS API with eleven_turbo_v2_5 model, streams audio back as
+    chunked audio/mpeg response.
+
+  backend/src/routes/websocket.ts
+    WS /conversation/:sessionId — Full WebSocket conversation handler.
+    Manages active connections (1 per session), receives speech-to-text
+    results from client, generates AI response via OpenRouter streaming,
+    sends text chunks back, signals TTS completion. Max 50 chunks,
+    response capped at 300 chars for TTS.
+
+  backend/src/routes/user.ts
+    PUT /update — Updates user profile fields (name, email, birthday,
+    gender, avatarUrl) — only updates fields that are provided.
+
+  backend/src/routes/session.ts
+    POST /create — Creates a new chat session. For prebuilt personas,
+    checks if user already has a synced copy in DB; if not, creates one.
+    For user personas, verifies ownership. Returns session ID.
+
+  backend/src/utils/promptBuilder.ts
+    Utility function that builds a system prompt from persona attributes
+    (name, traits, tone) for the AI model to stay in character.
+
+  backend/src/types/fastify.d.ts
+    TypeScript declaration file extending Fastify interfaces to include
+    `prisma` (PrismaClient) and `authenticate` decorators, plus JWT
+    payload types (id, email).
+
+  backend/prisma/schema.prisma
+    Prisma schema defining 4 models: User, Persona, Session, Message.
+    Uses PostgreSQL with UUID primary keys and relational constraints.
+
+  backend/package.json
+    Defines all backend dependencies and dev scripts (tsx watch).
+
+
+─── WEB FRONTEND (web/) ────────────────────────────────────────────────────
+
+  web/src/app/layout.tsx
+    Root layout wrapping all pages with QueryProvider (TanStack Query),
+    AppProvider (global state context), and AudioUnlock component.
+
+  web/src/app/page.tsx
+    Landing page — immediately redirects to /login.
+
+  web/src/app/login/page.tsx
+    Login form with email/password fields. On success, stores JWT token
+    in localStorage and redirects to /dashboard. Glassmorphism UI.
+
+  web/src/app/signup/page.tsx
+    Registration form with full name, phone, email, password, confirm
+    password, and terms checkbox. On success, redirects to /login.
+
+  web/src/app/dashboard/page.tsx
+    Main dashboard showing welcome message, stats cards (time spent,
+    active characters count), horizontally scrollable persona carousel,
+    and quick action buttons (Start Call, Create AI, Explore AI, Settings).
+    Uses TanStack Query for data fetching with caching.
+
+  web/src/app/dashboard/call/page.tsx
+    Full-screen voice call interface. Features:
+    - WebSocket connection for real-time AI conversation
+    - Browser Speech Recognition for mic input
+    - Audio queue with Web Audio API for playback
+    - Call timer, subtitle/caption display
+    - Mic/camera/CC toggle buttons, end call button
+    - Persona avatar with breathing glow animation
+    - Suspense boundary for SSR compatibility
+
+  web/src/app/dashboard/create/page.tsx
+    AI persona creation form with character name, description, type
+    (mentor/friend/expert/historical), gender, and age group selectors.
+
+  web/src/app/dashboard/explore/page.tsx
+    Full browse/search interface for all personas (user-created + prebuilt).
+    Features sidebar with category/gender/age filters, search bar, and
+    card grid with image previews. Click-to-connect starts a session.
+
+  web/src/app/dashboard/settings/page.tsx
+    Profile settings page with sidebar navigation. Allows editing name,
+    email, birthday, gender, and avatar (upload). Has preference toggles
+    for dark mode and notifications. Includes logout button.
+
+  web/src/lib/api.ts
+    API client utility with automatic JWT token attachment, error handling,
+    and organized API methods (auth, personas, avatar, session).
+
+  web/src/lib/personas.ts
+    Defines 4 prebuilt personas (Aurelius, Dr. Lilian, Alex, Ada) with
+    their traits, tones, genders, and Unsplash avatar URLs.
+
+  web/src/lib/speaker.ts
+    Browser SpeechSynthesis wrapper. Requires explicit unlock (user click)
+    before speech output works. Used for AI voice responses.
+
+  web/src/context/AppContext.tsx
+    React Context providing global state for user, personas list, and
+    current session across the application.
+
+  web/src/hooks/useWebSocket.ts
+    Custom React hook for WebSocket connections. Features global socket
+    reuse (prevents duplicates), event handling for STT results and AI
+    text streaming, and SpeechSynthesis integration.
+
+  web/src/providers/QueryProvider.tsx
+    TanStack Query client provider with 5-minute stale time, no refetch
+    on window focus, and 1 retry on failure.
+
+  web/src/components/audioUnlock.tsx
+    Invisible component that listens for first user click to unlock
+    browser SpeechSynthesis API (required by modern browsers).
+
+  web/next.config.ts
+    Next.js configuration with React Compiler enabled and API rewrites
+    proxying /api/* requests to http://localhost:3001/api/*.
+
+  web/package.json
+    Defines web dependencies: Next.js 16, React 19, TanStack Query 5,
+    TailwindCSS 4 with PostCSS.
+
+
+─── MOBILE APP (mobile/) ───────────────────────────────────────────────────
+
+  mobile/app/_layout.tsx
+    Root layout using Expo Router Stack with (auth) and (main) groups.
+
+  mobile/app/(auth)/login.tsx
+    Login screen with email/password fields. Uses Axios for API calls
+    and expo-secure-store for JWT token persistence.
+
+  mobile/app/(auth)/signup.tsx
+    Signup screen for new user registration.
+
+  mobile/app/(main)/index.tsx
+    Main screen after authentication.
+
+  mobile/app/(tabs)/_layout.tsx
+    Tab navigation layout with bottom tabs.
+
+  mobile/app/(tabs)/index.tsx
+    Home tab content.
+
+  mobile/app/(tabs)/explore.tsx
+    Explore tab for browsing personas.
+
+  mobile/app/index.tsx
+    Entry point / splash redirection.
+
+  mobile/app/modal.tsx
+    Modal screen component.
+
+  mobile/components/
+    Themed components (themed-text, themed-view), parallax-scroll-view,
+    haptic-tab, hello-wave animation, external link opener,
+    UI utilities (collapsible, icon-symbol).
+
+  mobile/constants/theme.ts
+    Color theme constants for light/dark mode.
+
+  mobile/hooks/
+    use-color-scheme (native + web variants), use-theme-color.
+
+  mobile/package.json
+    Defines mobile dependencies: Expo 54, React Native 0.81, NativeWind,
+    React Navigation 7, Reanimated 4, Axios, SecureStore.
+
+
+================================================================================
+8. ARCHITECTURE OVERVIEW
+================================================================================
+
+  ┌──────────────────────┐     ┌──────────────────────┐
+  │   Web App (Next.js)  │     │  Mobile (Expo/RN)    │
+  │   localhost:3000     │     │  (Android/iOS/Web)    │
+  │                      │     │                      │
+  │  • Login/Signup      │     │  • Login/Signup      │
+  │  • Dashboard         │     │  • Tabs (Home/Explore)│
+  │  • Create/Explore AI │     │  • Token via          │
+  │  • Voice Call (WS)   │     │    SecureStore        │
+  │  • Settings          │     │                      │
+  └──────────┬───────────┘     └──────────┬───────────┘
+             │ HTTP + WS                   │ HTTP
+             │ (proxied via Next.js        │ (direct via Axios)
+             │  rewrites to :3001)         │
+             │                             │
+             ▼                             ▼
+  ┌────────────────────────────────────────────────────┐
+  │            Backend (Fastify) — port 3001            │
+  │                                                    │
+  │  Plugins: CORS, JWT Auth, Prisma, WebSocket,       │
+  │           Multipart                                 │
+  │                                                    │
+  │  Routes:  /api/auth/*     (signup, login, me)       │
+  │           /api/personas/* (CRUD)                    │
+  │           /api/session/*  (create)                  │
+  │           /api/chat/*     (SSE streaming)           │
+  │           /api/voice/*    (Whisper STT)             │
+  │           /api/tts/*      (ElevenLabs TTS)          │
+  │           /api/avatar/*   (upload, AI generate)     │
+  │           /api/ws/*       (WebSocket voice)         │
+  └──────────┬────────┬────────┬───────┬───────────────┘
+             │        │        │       │
+             ▼        ▼        ▼       ▼
+  ┌─────────┐ ┌──────────┐ ┌───────┐ ┌──────────┐
+  │ Neon DB │ │OpenRouter │ │OpenAI │ │ElevenLabs│
+  │ (PgSQL) │ │(LLM chat)│ │(STT)  │ │ (TTS)    │
+  └─────────┘ └──────────┘ └───────┘ └──────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    │  Replicate (SDXL)   │
+                    │  Cloudinary (CDN)   │
+                    └─────────────────────┘
+
+
+================================================================================
+9. ENVIRONMENT VARIABLES REQUIRED
+================================================================================
+
+  DATABASE_URL          — PostgreSQL connection string (Neon)
+  JWT_SECRET            — Secret key for JWT signing
+  PORT                  — Backend port (default: 3001)
+  REPLICATE_API_TOKEN   — Replicate API key (avatar generation)
+  CLOUDINARY_CLOUD_NAME — Cloudinary cloud name
+  CLOUDINARY_API_KEY    — Cloudinary API key
+  CLOUDINARY_API_SECRET — Cloudinary API secret
+  OPENAI_API_KEY        — OpenAI API key (Whisper transcription)
+  OPENROUTER_API_KEY    — OpenRouter API key (LLM chat)
+  ELEVENLABS_API_KEY    — ElevenLabs API key (TTS)
+  EXPO_PUBLIC_API_URL   — Backend URL for mobile app (mobile/.env)
+
+
+================================================================================
+10. DESIGN & UI DETAILS
+================================================================================
+
+  • Dark theme with purple gradient backgrounds (#0f172a → #1e1b4b → #4c1d95)
+  • Glassmorphism cards (backdrop-blur, semi-transparent borders)
+  • Purple accent palette (#7c3aed, #4f46e5, #8b5cf6, #a78bfa)
+  • Gradient buttons with hover glow effects
+  • Breathing glow animation on call screen avatar
+  • Responsive layout (mobile-friendly web, dedicated mobile app)
+  • Loading spinners and state transitions throughout
+  • TailwindCSS utility classes (web: v4, mobile: NativeWind v4)
+
+================================================================================
+                              END OF ANALYSIS
+================================================================================
