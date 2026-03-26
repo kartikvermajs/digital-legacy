@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import Navbar from "@/components/layout/Navbar";
 import { PREBUILT_PERSONAS } from "@/lib/personas";
 
 interface User {
@@ -76,11 +77,11 @@ export default function Dashboard() {
 
   const handleSelect = async (persona: Persona) => {
     if (activePersonaId) return;
-    
+
     setActivePersonaId(persona.id);
     try {
       sessionStorage.setItem('activePersona', JSON.stringify(persona));
-      
+
       const res = await api.session.create({
         personaId: persona.id,
         isPrebuilt: persona.isPrebuilt,
@@ -90,7 +91,7 @@ export default function Dashboard() {
         gender: persona.gender,
         avatarUrl: persona.avatarUrl
       });
-      
+
       router.push(`/dashboard/call?sessionId=${res.sessionId}&personaId=${res.activePersonaId}`);
     } catch (err) {
       console.error("Failed to create session", err);
@@ -111,17 +112,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1e1b4b,#4c1d95)] font-sans text-white">
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.05)] backdrop-blur-xl sticky top-0 z-50">
-        <div className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa]">
-          Digital Legacy
-        </div>
-        <div className="flex-1"></div>
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] flex items-center justify-center font-bold shadow-[0_0_10px_#7c3aed]">
-            {user?.email?.charAt(0).toUpperCase() || "U"}
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <main className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 flex flex-col gap-10">
