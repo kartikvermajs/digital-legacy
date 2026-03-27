@@ -1,0 +1,135 @@
+AI Avatar Voice Platform — Overview
+
+
+What This Product Does
+This platform allows users to interact with AI-powered digital humans through real-time voice conversations.
+
+
+Users can:
+1. Talk to AI using natural voice
+2. See a realistic upper-body avatar that speaks back
+3. Create a personalized avatar using their own photo
+
+
+How the System Works
+1. The frontend (website) handles UI, avatar display, and interaction
+2. The backend manages logic, conversations, and API communication
+3. AI services generate responses, speech, and avatar textures
+
+
+During a conversation:
+1. The user speaks
+2. Speech is converted to text
+3. AI generates a response
+4. The response is converted into natural voice
+5. The avatar speaks with lip sync and subtle movements
+
+
+Avatar System
+1. Predefined Avatars
+2. high-quality, realistic 3D avatars are included
+3. These are fully tested and optimized for performance and animation
+
+
+User-Created Avatars
+Users can upload an image to create their own avatar.
+
+
+How it works:
+1. The system does not create a full 3D model
+2. Instead, it generates a realistic face texture from the image
+3. This texture is applied to an existing 3D model
+
+
+Important Clarification
+1. The result will resemble the user (approximately 70–85% similarity)
+2. It will not be an exact or pixel-perfect copy of the person
+
+
+Usage Limits (Cost Control)
+1. To ensure system stability and predictable costs:
+2. Each user can use the AI for up to 1 hour per day
+3. Each user can generate 1 avatar per week
+
+
+Technology Used
+Frontend
+1. Next.js (web application)
+2. Three.js (3D avatar rendering)
+
+
+Backend
+Fastify (API + real-time communication)
+
+
+AI Services
+1. OpenRouter for AI responses
+2. ElevenLabs for voice generation
+3. OpenAI Whisper for speech recognition
+
+
+Avatar Generation
+Replicate for generating face textures
+
+
+Hosting Setup
+1. Frontend hosted on Vercel
+2. Backend hosted on Render
+3. Database hosted on Neon
+4. Media (images, textures) stored on Cloudinary
+5. Background jobs handled using Redis (Upstash)
+
+This setup is cost-efficient and avoids expensive infrastructure like AWS in early stages.
+
+
+Performance Expectations
+1. Responses feel near real-time (around 1.5 to 2 seconds)
+2. Voice sounds natural and human-like
+3. Avatar movements include:
+4. lip sync
+5. subtle expressions
+6. idle animations
+
+
+Monthly Cost Estimate
+Infrastructure
+1. Frontend hosting: ₹1,500 – ₹3,000
+2. Backend hosting: ₹5,000 – ₹15,000
+3. Database: ₹0 – ₹2,000
+4. Media storage: ₹1,000 – ₹5,000
+5. Queue system: ₹500 – ₹2,000
+
+
+AI Services
+1. AI responses: ₹10,000 – ₹40,000
+2. Voice generation: ₹20,000 – ₹50,000
+3. Speech recognition: ₹5,000 – ₹20,000
+4. Avatar generation: ₹5,000 – ₹15,000
+
+
+Total Monthly Cost
+1. Minimum: ₹50,000
+2. Expected range: ₹60,000 – ₹1,20,000
+
+
+One-Time Costs
+3D avatar models: ₹2,000 – ₹10,000
+
+
+Scalability
+1. Designed to support around 1000 users initially
+2. Can scale further by upgrading backend and APIs
+3. No major infrastructure changes required in early stages
+
+
+Key Takeaway
+This system is designed to deliver:
+1. Real-time conversational AI
+2. Realistic avatar interaction
+3. Personalized user experience
+
+
+While keeping:
+1. costs controlled
+2. performance smooth
+3. architecture scalable
